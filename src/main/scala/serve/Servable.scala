@@ -5,48 +5,43 @@ import java.net.ServerSocket
 import scala.io.BufferedSource
 import scala.language.postfixOps
 import scala.util.Try
-
+import serve.http.HTTPRequest.{HTTPRequest, fromSocketToRequest}
 trait Servable:
 
   def listen(port:Int): Unit =
     val server = new ServerSocket(port)
 
     while true
-        do
-        val s = server.accept()
-        val in = new BufferedSource(s.getInputStream()).getLines()
-        val out = new PrintStream(s.getOutputStream())
+    do
+      val s = server.accept()
+      val req: HTTPRequest = s
+      val out = new PrintStream(s.getOutputStream())
 
-        while Try(in.hasNext).getOrElse(false)
-          do
-          println(in.next())
+      while Try(req.hasNext).getOrElse(false)
+      do
 
-          val chunked = """Transfer-Encoding: chunked\r\n
-                          |Content-Type: text/plain\r\n
-                          |\r\n
-                          |4\r\n
-                          |Wiki\r\n
-                          |5;extkey=extvalue\r\n
-                          |pedia\r\n
-                          |E\r\n
-                          |.in\r\n
-                          |\r\n
-                          |chunks.\r\n
-                          |0\r\n
-                          |HTTP/1.1 200 OK\r\n
-                          |\r\n""".stripMargin
+        req.headers.foreach(println)
 
-          val bytes = """HTTP/1.1 200 OK
-            |Server: Tacitus/0.1
-            |Date: Wed, 18 Oct 2017
-            |Content-type: text/html
-            |Content-Length: 23
-            |
-            |""".stripMargin
-          val body = "Hello, world!"
-          out.write(bytes.getBytes("utf-8") )
-          out.write(body.getBytes("utf-8") )
+        println(req.next())
+
+        val chunked = """HTTP/1.1 200 OK
+                          |Content-Type: text/plain
+                          |Transfer-Encoding: chunked
+                          |
+                          |7
+                          |Mozilla
+                          |
+                          |7
+                          |Mozilla
+                          |
+                          |0""".stripMargin
+
+
+        //out.write(bytes.getBytes("utf-8") )
+        out.write(chunked.getBytes("utf-8") )
+
 
         out.flush()
-        s.close()
+        out.close()
+
 
